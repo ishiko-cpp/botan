@@ -103,6 +103,11 @@
    #include <botan/ec_group.h>
 #endif
 
+#if defined(BOTAN_HAS_EC_HASH_TO_CURVE)
+   #include <botan/ec_h2c.h>
+   #include <botan/kdf.h>
+#endif
+
 #if defined(BOTAN_HAS_DL_GROUP)
    #include <botan/dl_group.h>
 #endif
@@ -753,6 +758,12 @@ class Speed final : public Command
                bench_os2ecp(ecc_groups, msec);
                }
 #endif
+#if defined(BOTAN_HAS_EC_HASH_TO_CURVE)
+            else if(algo == "ec_h2c")
+               {
+               bench_ec_h2c(ecc_groups, msec);
+               }
+#endif
             else if(algo == "RNG")
                {
 #if defined(BOTAN_HAS_AUTO_SEEDING_RNG)
@@ -1209,6 +1220,9 @@ class Speed final : public Command
 
             const Botan::EC_Group ec_group(group_name);
 
+            std::unique_ptr<Timer> uncmp_timer = make_timer("OS2ECP uncompressed");
+            std::unique_ptr<Timer> cmp_timer = make_timer("OS2ECP compressed");
+
             while(uncmp_timer->under(runtime) && cmp_timer->under(runtime))
                {
                const Botan::BigInt k(rng(), 256);
@@ -1225,6 +1239,35 @@ class Speed final : public Command
             }
          }
 
+#endif
+
+#if defined(BOTAN_HAS_EC_HASH_TO_CURVE)
+      void bench_ec_h2c(const std::vector<std::string>& groups,
+                        const std::chrono::milliseconds runtime)
+         {
+         for(std::string group_name : groups)
+            {
+            std::unique_ptr<Timer> h2c_timer = make_timer("Hash to curve " + group_name);
+
+            const Botan::EC_Group group(group_name);
+            const auto kdf = Botan::KDF::create("HKDF(SHA-256)");
+
+            while(h2c_timer->under(runtime))
+               {
+               std::vector<uint8_t> input(32);
+
+               rng().randomize(input.data(), input.size());
+
+               const Botan::PointGFp p = h2c_timer->run([&]() {
+                     return Botan::hash_to_curve_swu(group, *kdf, input.data(), input.size());
+                  });
+
+               BOTAN_ASSERT_NOMSG(p.on_the_curve());
+               }
+
+            record_result(h2c_timer);
+            }
+         }
 #endif
 
 #if defined(BOTAN_HAS_FPE_FE1)
