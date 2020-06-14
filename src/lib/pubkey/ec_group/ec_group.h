@@ -299,6 +299,26 @@ class BOTAN_PUBLIC_API(2,0) EC_Group final
       BigInt random_scalar(RandomNumberGenerator& rng) const;
 
       /**
+      * Hash onto the curve.
+      * For some curve types no mapping is currently available, in this
+      * case this function will throw an exception.
+      *
+      * @param hash_fn the hash function to use (typically "SHA-256" or "SHA-512")
+      * @param random_oracle if the mapped point must be uniform (use
+               "true" here unless you know what you are doing)
+      * @param input the input to hash
+      * @param input_len length of input in bytes
+      * @param domain_sep a domain seperator
+      * @param domain_sep_len length of domain_sep in bytes
+      */
+      PointGFp hash_to_curve(const std::string& hash_fn,
+                             bool random_oracle,
+                             const uint8_t input[],
+                             size_t input_len,
+                             const uint8_t domain_sep[],
+                             size_t domain_sep_len) const;
+
+      /**
       * Return the zero (or infinite) point on this curve
       */
       PointGFp zero_point() const;

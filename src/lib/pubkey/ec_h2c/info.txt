@@ -8,3 +8,6 @@ hkdf
 hmac
 </requires>
 
+<header:internal>
+ec_h2c.h
+</header:internal>

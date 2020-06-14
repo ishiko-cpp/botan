@@ -103,11 +103,6 @@
    #include <botan/ec_group.h>
 #endif
 
-#if defined(BOTAN_HAS_EC_HASH_TO_CURVE)
-   #include <botan/ec_h2c.h>
-   #include <botan/kdf.h>
-#endif
-
 #if defined(BOTAN_HAS_DL_GROUP)
    #include <botan/dl_group.h>
 #endif
@@ -1247,30 +1242,32 @@ class Speed final : public Command
          {
          for(std::string group_name : groups)
             {
-            std::unique_ptr<Timer> h2c_timer = make_timer("Hash to curve SSWU " + group_name);
+            std::unique_ptr<Timer> h2c_ro_timer = make_timer("Hash to curve RO " + group_name);
+            std::unique_ptr<Timer> h2c_nu_timer = make_timer("Hash to curve NU " + group_name);
 
             const Botan::EC_Group group(group_name);
 
-            if(group.get_a().is_zero() || group.get_b().is_zero() || group.get_p() % 4 == 1)
-               {
-               error_output() << "Hash to curve SSWU does not support " << group_name << "\n";
-               continue;
-               }
-
-            while(h2c_timer->under(runtime))
+            while(h2c_ro_timer->under(runtime))
                {
                std::vector<uint8_t> input(32);
 
                rng().randomize(input.data(), input.size());
 
-               const Botan::PointGFp p = h2c_timer->run([&]() {
-                  return Botan::hash_to_curve_sswu(group, "SHA-256", input.data(), input.size(), nullptr, 0);
+               const Botan::PointGFp p1 = h2c_ro_timer->run([&]() {
+                  return group.hash_to_curve("SHA-256", true, input.data(), input.size(), nullptr, 0);
                   });
 
-               BOTAN_ASSERT_NOMSG(p.on_the_curve());
+               BOTAN_ASSERT_NOMSG(p1.on_the_curve());
+
+               const Botan::PointGFp p2 = h2c_nu_timer->run([&]() {
+                  return group.hash_to_curve("SHA-256", false, input.data(), input.size(), nullptr, 0);
+                  });
+
+               BOTAN_ASSERT_NOMSG(p2.on_the_curve());
                }
 
-            record_result(h2c_timer);
+            record_result(h2c_ro_timer);
+            record_result(h2c_nu_timer);
             }
          }
 #endif

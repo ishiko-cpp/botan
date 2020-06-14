@@ -19,6 +19,10 @@
 #include <botan/rng.h>
 #include <vector>
 
+#if defined(BOTAN_HAS_EC_HASH_TO_CURVE)
+  #include <botan/internal/ec_h2c.h>
+#endif
+
 namespace Botan {
 
 class EC_Group_Data final
@@ -667,6 +671,34 @@ PointGFp EC_Group::blinded_var_point_multiply(const PointGFp& point,
 PointGFp EC_Group::zero_point() const
    {
    return PointGFp(data().curve());
+   }
+
+PointGFp EC_Group::hash_to_curve(const std::string& hash_fn,
+                                 bool random_oracle,
+                                 const uint8_t input[],
+                                 size_t input_len,
+                                 const uint8_t domain_sep[],
+                                 size_t domain_sep_len) const
+   {
+#if defined(BOTAN_HAS_EC_HASH_TO_CURVE)
+
+   const bool a_is_zero = get_a().is_zero();
+   const bool b_is_zero = get_b().is_zero();
+   const size_t p_mod_4 = get_p() % 4;
+
+   // Only have SSWU currently
+   if(!a_is_zero && !b_is_zero && p_mod_4 == 3)
+      {
+      const Modular_Reducer mod_p(get_p());
+      }
+
+
+   throw Not_Implemented("EC_Group::hash_to_curve not available for this curve type");
+
+#else
+   BOTAN_UNUSED(hash_fn, random_oracle, input, input_len, domain_sep, domain_sep_len);
+   throw Not_Implemented("EC_Group::hash_to_curve functionality not available in this configuration");
+#endif
    }
 
 std::vector<uint8_t>
